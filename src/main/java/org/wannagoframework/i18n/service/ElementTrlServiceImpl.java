@@ -31,11 +31,15 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
+import org.wannagoframework.i18n.domain.Action;
+import org.wannagoframework.i18n.domain.ActionTrl;
 import org.wannagoframework.i18n.domain.Element;
 import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.repository.ElementRepository;
@@ -68,7 +72,7 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
   }
 
   @Transactional
-  @PostConstruct
+  @EventListener(ApplicationReadyEvent.class)
   protected void postLoad() {
     bootstrapElements();
   }
@@ -153,6 +157,28 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
   @Transactional
   public void deleteAll(List<ElementTrl> elementTrls) {
     elementTrlRepository.deleteAll(elementTrls);
+  }
+
+  @Transactional
+  @Override
+  public void postUpdate(ElementTrl elementTrl) {
+    boolean isAllTranslated = true;
+    Element element = elementTrl.getElement();
+    List<ElementTrl> trls = element.getTranslations();
+    for (ElementTrl trl : trls) {
+      if (!trl.getIsTranslated()) {
+        isAllTranslated = false;
+        break;
+      }
+    }
+    if ( isAllTranslated && ! element.getIsTranslated() ) {
+      element.setIsTranslated(true);
+      elementRepository.save(element );
+    }
+    else if ( ! isAllTranslated && element.getIsTranslated()  ) {
+      element.setIsTranslated(false);
+      elementRepository.save(element );
+    }
   }
 
   @Override
@@ -241,6 +267,16 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           elementTrl.setIsTranslated(true);
 
           elementTrlRepository.save(elementTrl);
+        }  else {
+          elementTrl = _elementTrl.get();
+          if ( ! elementTrl.getIsTranslated() ) {
+            elementTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+            elementTrl.setIso3Language(language);
+            elementTrl.setElement(element);
+            elementTrl.setIsTranslated(true);
+
+            elementTrlRepository.save(elementTrl);
+          }
         }
       }
     } catch (IOException e) {

@@ -19,6 +19,7 @@
 package org.wannagoframework.i18n.domain;
 
 import javax.persistence.Entity;
+import javax.persistence.EntityListeners;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
@@ -29,6 +30,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hibernate.annotations.Cache;
 import org.hibernate.annotations.CacheConcurrencyStrategy;
+import org.wannagoframework.i18n.listeners.ElementTrlListener;
+import org.wannagoframework.i18n.listeners.MessageTrlListener;
 
 /**
  * @author WannaGo Dev1.
@@ -40,6 +43,7 @@ import org.hibernate.annotations.CacheConcurrencyStrategy;
 @Entity
 @Cache(usage = CacheConcurrencyStrategy.TRANSACTIONAL)
 @TableGenerator(name = "MessageTrlKeyGen", table = "Sequence", pkColumnName = "COLUMN_NAME", pkColumnValue = "MESSAGE_TRL_ID", valueColumnName = "SEQ_VAL", initialValue = 0, allocationSize = 1)
+@EntityListeners(MessageTrlListener.class)
 public class MessageTrl extends EntityTranslation {
 
   @Id

@@ -39,4 +39,6 @@ public interface ActionTrlService extends CrudService<ActionTrl> {
   List<ActionTrl> saveAll(List<ActionTrl> translations);
 
   void deleteAll(List<ActionTrl> actionTrls);
+
+  void postUpdate(ActionTrl actionTrl);
 }

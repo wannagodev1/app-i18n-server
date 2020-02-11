@@ -31,11 +31,15 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
+import org.wannagoframework.i18n.domain.Action;
+import org.wannagoframework.i18n.domain.ActionTrl;
 import org.wannagoframework.i18n.domain.Message;
 import org.wannagoframework.i18n.domain.MessageTrl;
 import org.wannagoframework.i18n.repository.MessageRepository;
@@ -68,7 +72,7 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
   }
 
   @Transactional
-  @PostConstruct
+  @EventListener(ApplicationReadyEvent.class)
   protected void postLoad() {
     bootstrapMessages();
   }
@@ -155,6 +159,28 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
     messageTrlRepository.deleteAll(messageTrls);
   }
 
+  @Transactional
+  @Override
+  public void postUpdate(MessageTrl messageTrl) {
+    boolean isAllTranslated = true;
+    Message message = messageTrl.getMessage();
+    List<MessageTrl> trls = messageTrl.getMessage().getTranslations();
+    for (MessageTrl trl : trls) {
+      if (!trl.getIsTranslated()) {
+        isAllTranslated = false;
+        break;
+      }
+    }
+    if ( isAllTranslated && ! message.getIsTranslated() ) {
+      message.setIsTranslated(true);
+      messageRepository.save(message );
+    }
+    else if ( ! isAllTranslated && message.getIsTranslated()  ) {
+      message.setIsTranslated(false);
+      messageRepository.save(message );
+    }
+  }
+
   @Override
   public JpaRepository<MessageTrl, Long> getRepository() {
     return messageTrlRepository;
@@ -237,6 +263,16 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
           messageTrl.setIsTranslated(true);
 
           messageTrlRepository.save(messageTrl);
+        }  else {
+          messageTrl = _messageTrl.get();
+          if ( ! messageTrl.getIsTranslated() ) {
+            messageTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+            messageTrl.setIso3Language(language);
+            messageTrl.setMessage(message);
+            messageTrl.setIsTranslated(true);
+
+            messageTrlRepository.save(messageTrl);
+          }
         }
       }
     } catch (IOException e) {

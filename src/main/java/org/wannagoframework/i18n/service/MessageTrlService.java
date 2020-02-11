@@ -19,6 +19,7 @@
 package org.wannagoframework.i18n.service;
 
 import java.util.List;
+import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.domain.MessageTrl;
 
 /**
@@ -39,4 +40,6 @@ public interface MessageTrlService extends CrudService<MessageTrl> {
   List<MessageTrl> saveAll(List<MessageTrl> translations);
 
   void deleteAll(List<MessageTrl> messageTrls);
+
+  void postUpdate(MessageTrl messageTrl);
 }

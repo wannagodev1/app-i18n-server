@@ -31,6 +31,8 @@ import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.apache.poi.ss.usermodel.WorkbookFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,6 +40,8 @@ import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
 import org.wannagoframework.i18n.domain.Action;
 import org.wannagoframework.i18n.domain.ActionTrl;
+import org.wannagoframework.i18n.domain.Element;
+import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.repository.ActionRepository;
 import org.wannagoframework.i18n.repository.ActionTrlRepository;
 
@@ -68,7 +72,7 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
   }
 
   @Transactional
-  @PostConstruct
+  @EventListener(ApplicationReadyEvent.class)
   protected void postLoad() {
     bootstrapActions();
   }
@@ -161,6 +165,28 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
   }
 
   @Transactional
+  @Override
+  public void postUpdate(ActionTrl actionTrl) {
+    boolean isAllTranslated = true;
+    Action action = actionTrl.getAction();
+    List<ActionTrl> trls = actionTrl.getAction().getTranslations();
+    for (ActionTrl trl : trls) {
+      if (!trl.getIsTranslated()) {
+        isAllTranslated = false;
+        break;
+      }
+    }
+    if ( isAllTranslated && ! action.getIsTranslated() ) {
+      action.setIsTranslated(true);
+      actionRepository.save(action );
+    }
+     else if ( ! isAllTranslated && action.getIsTranslated()  ) {
+      action.setIsTranslated(false);
+      actionRepository.save(action );
+    }
+  }
+
+  @Transactional
   public synchronized void bootstrapActions() {
     if (hasBootstrapped || !isBootstrapEnabled) {
       return;
@@ -237,6 +263,16 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           actionTrl.setIsTranslated(true);
 
           actionTrlRepository.save(actionTrl);
+        } else {
+          actionTrl = _actionTrl.get();
+          if ( ! actionTrl.getIsTranslated() ) {
+            actionTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+            actionTrl.setIso3Language(language);
+            actionTrl.setAction(action);
+            actionTrl.setIsTranslated(true);
+
+            actionTrlRepository.save(actionTrl);
+          }
         }
       }
     } catch (IOException e) {
