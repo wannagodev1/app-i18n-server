@@ -23,7 +23,7 @@ import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.service.ElementTrlService;
 
 /**
- * @author Alexandre Clavaud.
+ * @author WannaGo Dev1.
  * @version 1.0
  * @since 2/10/20
  */

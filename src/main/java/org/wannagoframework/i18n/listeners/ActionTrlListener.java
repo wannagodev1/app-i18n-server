@@ -16,7 +16,6 @@
 package org.wannagoframework.i18n.listeners;
 
 import javax.persistence.PostPersist;
-import javax.persistence.PostRemove;
 import javax.persistence.PostUpdate;
 import org.springframework.stereotype.Component;
 import org.wannagoframework.commons.utils.SpringApplicationContext;
@@ -24,7 +23,7 @@ import org.wannagoframework.i18n.domain.ActionTrl;
 import org.wannagoframework.i18n.service.ActionTrlService;
 
 /**
- * @author Alexandre Clavaud.
+ * @author WannaGo Dev1.
  * @version 1.0
  * @since 2/10/20
  */
