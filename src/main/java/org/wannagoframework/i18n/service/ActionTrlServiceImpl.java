@@ -250,6 +250,8 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           action = actionRepository.save(action);
         } else {
           action = _action.get();
+          action.setIsTranslated(true);
+          action = actionRepository.save(action);
         }
 
         Optional<ActionTrl> _actionTrl = actionTrlRepository

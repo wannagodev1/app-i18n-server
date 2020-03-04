@@ -254,6 +254,8 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           element = elementRepository.save(element);
         } else {
           element = _element.get();
+          element.setIsTranslated(true);
+          element = elementRepository.save(element);
         }
 
         Optional<ElementTrl> _elementTrl = elementTrlRepository

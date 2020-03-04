@@ -250,6 +250,8 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
           message = messageRepository.save(message);
         } else {
           message = _message.get();
+          message.setIsTranslated(true);
+          message = messageRepository.save(message);
         }
 
         Optional<MessageTrl> _messageTrl = messageTrlRepository
