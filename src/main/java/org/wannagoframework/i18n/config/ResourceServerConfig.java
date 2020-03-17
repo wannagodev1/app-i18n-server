@@ -112,12 +112,6 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
     http.authorizeRequests()
         .antMatchers("/v2/api-docs", "/swagger*/**", "/webjars/**").permitAll()
         .antMatchers("/ping").permitAll()
-        .antMatchers("/actuator/health").permitAll()
-        .antMatchers("/actuator/info").permitAll()
-        .antMatchers("/actuator/hystrix.stream").permitAll()
-        .antMatchers("/actuator/prometheus").permitAll()
-        .antMatchers("/actuator/**").hasAuthority("MONITORING")
-        .antMatchers("/monitoring/**").hasAuthority("MONITORING")
         .anyRequest().authenticated();
   }
 }
