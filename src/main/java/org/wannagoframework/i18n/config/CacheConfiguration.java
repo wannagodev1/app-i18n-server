@@ -19,17 +19,15 @@
 package org.wannagoframework.i18n.config;
 
 import com.hazelcast.config.Config;
-import com.hazelcast.config.DiscoveryConfig;
-import com.hazelcast.config.DiscoveryStrategyConfig;
 import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.GroupConfig;
 import com.hazelcast.config.ManagementCenterConfig;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MaxSizeConfig;
-import com.hazelcast.config.MemberAddressProviderConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import org.bitsofinfo.hazelcast.discovery.docker.swarm.SwarmMemberAddressProvider;
+import com.hazelcast.eureka.one.EurekaOneDiscoveryStrategyFactory;
+import com.netflix.discovery.EurekaClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -60,11 +58,14 @@ public class CacheConfiguration implements DisposableBean {
 
   private Registration registration;
 
+  private final EurekaClient eurekaClient;
+
   public CacheConfiguration(Environment env, ServerProperties serverProperties,
-      DiscoveryClient discoveryClient) {
+      DiscoveryClient discoveryClient, EurekaClient eurekaClient) {
     this.env = env;
     this.serverProperties = serverProperties;
     this.discoveryClient = discoveryClient;
+    this.eurekaClient = eurekaClient;
   }
 
   @Autowired(required = false)
@@ -88,16 +89,16 @@ public class CacheConfiguration implements DisposableBean {
   public HazelcastInstance hazelcastInstance(AppProperties appProperties) {
     log.debug("Configuring Hazelcast");
     HazelcastInstance hazelCastInstance = Hazelcast
-        .getHazelcastInstanceByName("doYouWannaPlay-i18n");
+        .getHazelcastInstanceByName("backend-server");
     if (hazelCastInstance != null) {
       log.debug("Hazelcast already initialized");
       return hazelCastInstance;
     }
     Config config = new Config();
-    config.setInstanceName("doYouWannaPlay-i18n");
+    config.setInstanceName("backend-server");
 
     GroupConfig groupConfig = new GroupConfig();
-    groupConfig.setName("doYouWannaPlay-i18n");
+    groupConfig.setName("backend-server");
     config.setGroupConfig(groupConfig);
 
     config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(false);
@@ -123,7 +124,7 @@ public class CacheConfiguration implements DisposableBean {
           config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(clusterMember);
         }
       } else if (env
-          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_GCP))) {
+          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_GCP,SpringProfileConstants.SPRING_PROFILE_STAGING, SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_LOCAL_EUREKA)) ) {
         log.debug(
             "Application is running with the \"devgcp\" profile, Hazelcast cluster will use swarm discovery");
 
@@ -134,14 +135,18 @@ public class CacheConfiguration implements DisposableBean {
         config.getNetworkConfig().getJoin().getAwsConfig().setEnabled(false);
         config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(false);
 
-        DiscoveryStrategyConfig discoveryStrategyConfig = new DiscoveryStrategyConfig(
-            "org.bitsofinfo.hazelcast.discovery.docker.swarm.DockerSwarmDiscoveryStrategy");
-        discoveryStrategyConfig
-            .addProperty("docker-network-names", env.getProperty("dockerNetworkNames"));
-        discoveryStrategyConfig
-            .addProperty("docker-service-names", env.getProperty("dockerServiceNames"));
-        discoveryStrategyConfig
-            .addProperty("hazelcast-peer-port", env.getProperty("hazelcastPeerPort"));
+        EurekaOneDiscoveryStrategyFactory.setEurekaClient(eurekaClient);
+
+        config.getNetworkConfig().getJoin().getEurekaConfig().setEnabled(true)
+            .setProperty("self-registration", "true")
+            .setProperty("namespace", "hazelcast")
+            .setProperty("use-metadata-for-host-and-port", "true");
+
+        /*
+       DiscoveryStrategyConfig discoveryStrategyConfig = new DiscoveryStrategyConfig("org.bitsofinfo.hazelcast.discovery.docker.swarm.DockerSwarmDiscoveryStrategy");
+       discoveryStrategyConfig.addProperty("docker-network-names", env.getProperty("dockerNetworkNames"));
+       discoveryStrategyConfig.addProperty("docker-service-names", env.getProperty("dockerServiceNames"));
+       discoveryStrategyConfig.addProperty("hazelcast-peer-port", env.getProperty("hazelcastPeerPort"));
 
         DiscoveryConfig discoveryConfig = new DiscoveryConfig();
         discoveryConfig.addDiscoveryStrategyConfig(discoveryStrategyConfig);
@@ -157,6 +162,7 @@ public class CacheConfiguration implements DisposableBean {
         memberAddressProviderConfig.setImplementation(memberAddressProvider);
 
         config.getNetworkConfig().setMemberAddressProviderConfig(memberAddressProviderConfig);
+         */
 
       } else { // Production configuration, one host per instance all using port 5701
         config.getNetworkConfig().setPort(5701);
@@ -172,8 +178,7 @@ public class CacheConfiguration implements DisposableBean {
 
     // Full reference is available at: http://docs.hazelcast.org/docs/management-center/3.9/manual/html/Deploying_and_Starting.html
     config.setManagementCenterConfig(initializeDefaultManagementCenterConfig(appProperties));
-    config.getMapConfigs()
-        .put("org.wannagoframework.i18n.domain.*", initializeDomainMapConfig(appProperties));
+
     return Hazelcast.newHazelcastInstance(config);
   }
 
