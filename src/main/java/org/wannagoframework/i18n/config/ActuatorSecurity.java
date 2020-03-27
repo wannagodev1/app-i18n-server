@@ -21,6 +21,7 @@ package org.wannagoframework.i18n.config;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.boot.actuate.health.HealthEndpoint;
+import org.springframework.cloud.netflix.hystrix.HystrixStreamEndpoint;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.annotation.Order;
@@ -89,7 +90,8 @@ public class ActuatorSecurity {
     protected void configure(HttpSecurity http) throws Exception {
       http.antMatcher("/actuator/**")
           .authorizeRequests(authorize ->
-              authorize.requestMatchers(EndpointRequest.to(HealthEndpoint.class)).permitAll()
+              authorize.requestMatchers(EndpointRequest.to(HealthEndpoint.class),EndpointRequest.to(
+                  HystrixStreamEndpoint.class)).permitAll()
                   .requestMatchers(EndpointRequest.toAnyEndpoint()).hasRole("MONITORING")
                   .anyRequest().permitAll()
           ).httpBasic(Customizer.withDefaults());
