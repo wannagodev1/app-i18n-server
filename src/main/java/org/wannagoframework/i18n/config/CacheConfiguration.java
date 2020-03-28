@@ -56,16 +56,16 @@ public class CacheConfiguration implements DisposableBean {
 
   private final DiscoveryClient discoveryClient;
 
+  @Autowired(required = false)
+  private EurekaClient eurekaClient;
+
   private Registration registration;
 
-  private final EurekaClient eurekaClient;
-
   public CacheConfiguration(Environment env, ServerProperties serverProperties,
-      DiscoveryClient discoveryClient, EurekaClient eurekaClient) {
+      DiscoveryClient discoveryClient) {
     this.env = env;
     this.serverProperties = serverProperties;
     this.discoveryClient = discoveryClient;
-    this.eurekaClient = eurekaClient;
   }
 
   @Autowired(required = false)
@@ -111,22 +111,9 @@ public class CacheConfiguration implements DisposableBean {
       log.debug("Configuring Hazelcast clustering for instanceId: {}", serviceId);
       // In development, everything goes through 127.0.0.1, with a different port
       if (env
-          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_LOCAL))) {
-        log.debug("Application is running with the \"devlocal\" profile, Hazelcast " +
-            "cluster will only work with localhost instances");
-
-        System.setProperty("hazelcast.local.localAddress", "127.0.0.1");
-        config.getNetworkConfig().setPort(serverProperties.getPort() + 5701);
-        config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(true);
-        for (ServiceInstance instance : discoveryClient.getInstances(serviceId)) {
-          String clusterMember = "127.0.0.1:" + (instance.getPort() + 5701);
-          log.debug("Adding Hazelcast (dev) cluster member {}", clusterMember);
-          config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(clusterMember);
-        }
-      } else if (env
-          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_GCP,SpringProfileConstants.SPRING_PROFILE_STAGING, SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_LOCAL_EUREKA)) ) {
+          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_EUREKA))) {
         log.debug(
-            "Application is running with the \"devgcp\" profile, Hazelcast cluster will use swarm discovery");
+            "Application is running with the \"eureka\" profile, Hazelcast cluster will use Eureka Client");
 
         config.setProperty("hazelcast.discovery.enabled", "true");
         config.setProperty("hazelcast.shutdownhook.enabled", "true");
@@ -141,29 +128,19 @@ public class CacheConfiguration implements DisposableBean {
             .setProperty("self-registration", "true")
             .setProperty("namespace", "hazelcast")
             .setProperty("use-metadata-for-host-and-port", "true");
+      } else if (env
+          .acceptsProfiles(Profiles.of(SpringProfileConstants.SPRING_PROFILE_DEVELOPMENT_LOCAL))) {
+        log.debug("Application is running with the \"local\" profile, Hazelcast " +
+            "cluster will only work with localhost instances");
 
-        /*
-       DiscoveryStrategyConfig discoveryStrategyConfig = new DiscoveryStrategyConfig("org.bitsofinfo.hazelcast.discovery.docker.swarm.DockerSwarmDiscoveryStrategy");
-       discoveryStrategyConfig.addProperty("docker-network-names", env.getProperty("dockerNetworkNames"));
-       discoveryStrategyConfig.addProperty("docker-service-names", env.getProperty("dockerServiceNames"));
-       discoveryStrategyConfig.addProperty("hazelcast-peer-port", env.getProperty("hazelcastPeerPort"));
-
-        DiscoveryConfig discoveryConfig = new DiscoveryConfig();
-        discoveryConfig.addDiscoveryStrategyConfig(discoveryStrategyConfig);
-
-        config.getNetworkConfig().getJoin().setDiscoveryConfig(discoveryConfig);
-
-        SwarmMemberAddressProvider memberAddressProvider = new SwarmMemberAddressProvider(
-            env.getProperty("dockerNetworkNames"), "", env.getProperty("dockerServiceNames"),
-            Integer.parseInt(env.getProperty("hazelcastPeerPort")), true, true);
-
-        MemberAddressProviderConfig memberAddressProviderConfig = new MemberAddressProviderConfig();
-        memberAddressProviderConfig.setEnabled(true);
-        memberAddressProviderConfig.setImplementation(memberAddressProvider);
-
-        config.getNetworkConfig().setMemberAddressProviderConfig(memberAddressProviderConfig);
-         */
-
+        System.setProperty("hazelcast.local.localAddress", "127.0.0.1");
+        config.getNetworkConfig().setPort(serverProperties.getPort() + 5701);
+        config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(true);
+        for (ServiceInstance instance : discoveryClient.getInstances(serviceId)) {
+          String clusterMember = "127.0.0.1:" + (instance.getPort() + 5701);
+          log.debug("Adding Hazelcast (dev) cluster member {}", clusterMember);
+          config.getNetworkConfig().getJoin().getTcpIpConfig().addMember(clusterMember);
+        }
       } else { // Production configuration, one host per instance all using port 5701
         config.getNetworkConfig().setPort(5701);
         config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(true);
