@@ -21,10 +21,7 @@ package org.wannagoframework.i18n.endpoint;
 import java.util.List;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 import org.wannagoframework.commons.endpoint.BaseEndpoint;
 import org.wannagoframework.commons.utils.OrikaBeanMapper;
 import org.wannagoframework.dto.serviceQuery.ServiceResult;
@@ -43,6 +40,8 @@ import org.wannagoframework.i18n.service.ActionTrlService;
  * @version 1.0
  * @since 2019-06-05
  */
+
+@CrossOrigin("http://localhost:4200")
 @RestController
 @RequestMapping("/actionTrlService")
 public class ActionTrlServiceEndpoint extends BaseEndpoint {

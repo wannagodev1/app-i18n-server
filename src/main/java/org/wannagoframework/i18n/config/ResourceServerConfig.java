@@ -113,5 +113,6 @@ public class ResourceServerConfig extends ResourceServerConfigurerAdapter {
         .antMatchers("/v2/api-docs", "/swagger*/**", "/webjars/**").permitAll()
         .antMatchers("/ping").permitAll()
         .anyRequest().authenticated();
+    http.cors();
   }
 }
