@@ -21,12 +21,13 @@ package org.wannagoframework.i18n.config;
 import com.hazelcast.config.Config;
 import com.hazelcast.config.EvictionPolicy;
 import com.hazelcast.config.GroupConfig;
+import com.hazelcast.config.InterfacesConfig;
 import com.hazelcast.config.ManagementCenterConfig;
 import com.hazelcast.config.MapConfig;
 import com.hazelcast.config.MaxSizeConfig;
 import com.hazelcast.core.Hazelcast;
 import com.hazelcast.core.HazelcastInstance;
-import com.netflix.discovery.EurekaClient;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.DisposableBean;
@@ -55,16 +56,17 @@ public class CacheConfiguration implements DisposableBean {
 
   private final DiscoveryClient discoveryClient;
 
-  @Autowired(required = false)
-  private EurekaClient eurekaClient;
+  private final AppProperties appProperties;
 
   private Registration registration;
 
   public CacheConfiguration(Environment env, ServerProperties serverProperties,
-      DiscoveryClient discoveryClient) {
+      DiscoveryClient discoveryClient,
+      AppProperties appProperties) {
     this.env = env;
     this.serverProperties = serverProperties;
     this.discoveryClient = discoveryClient;
+    this.appProperties = appProperties;
   }
 
   @Autowired(required = false)
@@ -122,6 +124,10 @@ public class CacheConfiguration implements DisposableBean {
         config.getNetworkConfig().getJoin().getTcpIpConfig().setEnabled(false);
         config.getNetworkConfig().getJoin().getMulticastConfig().setEnabled(true);
 
+        if (StringUtils.isNotBlank(appProperties.getHazelcast().getInterfaces())) {
+          InterfacesConfig interfaceConfig = config.getNetworkConfig().getInterfaces();
+          interfaceConfig.setEnabled(true).addInterface(appProperties.getHazelcast().getInterfaces());
+        }
 /*
         EurekaOneDiscoveryStrategyFactory.setEurekaClient(eurekaClient);
 
