@@ -27,7 +27,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 public class AppProperties {
 
   private final Hazelcast hazelcast = new Hazelcast();
-  
+
   @Data
   public static class Hazelcast {
 
