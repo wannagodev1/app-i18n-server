@@ -40,9 +40,9 @@ public interface ActionRepository extends JpaRepository<Action, Long> {
 
   long countByNameLike(String name);
 
-  @Query("SELECT DISTINCT a FROM Action a INNER JOIN ActionTrl t ON a.id = t.action WHERE a.name like :filter or t.value like :filter")
+  @Query("SELECT DISTINCT a FROM Action a INNER JOIN ActionTrl t ON a.id = t.action.id WHERE a.name like :filter or t.value like :filter")
   Page<Action> findAnyMatching(String filter, Pageable pageable);
 
-  @Query("SELECT COUNT(a) FROM Action a INNER JOIN ActionTrl t ON a.id = t.action WHERE a.name like :filter or t.value like :filter")
+  @Query("SELECT COUNT(DISTINCT a) FROM Action a INNER JOIN ActionTrl t ON a.id = t.action.id WHERE a.name like :filter or t.value like :filter")
   long countAnyMatching(String filter);
 }

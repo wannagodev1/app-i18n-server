@@ -40,9 +40,9 @@ public interface ElementRepository extends JpaRepository<Element, Long> {
 
   long countByNameLike(String name);
 
-  @Query("SELECT DISTINCT a FROM Element a INNER JOIN ElementTrl t ON a.id = t.element WHERE a.name like :filter or t.value like :filter")
+  @Query("SELECT DISTINCT a FROM Element a INNER JOIN ElementTrl t ON a.id = t.element.id WHERE a.name like :filter or t.value like :filter")
   Page<Element> findAnyMatching(String filter, Pageable pageable);
 
-  @Query("SELECT COUNT(a) FROM Element a INNER JOIN ElementTrl t ON a.id = t.element WHERE a.name like :filter or t.value like :filter")
+  @Query("SELECT COUNT(DISTINCT a) FROM Element a INNER JOIN ElementTrl t ON a.id = t.element.id WHERE a.name like :filter or t.value like :filter")
   long countAnyMatching(String filter);
 }
