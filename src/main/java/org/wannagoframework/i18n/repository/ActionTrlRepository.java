@@ -21,6 +21,7 @@ package org.wannagoframework.i18n.repository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.wannagoframework.i18n.domain.Action;
 import org.wannagoframework.i18n.domain.ActionTrl;
@@ -38,6 +39,9 @@ public interface ActionTrlRepository extends JpaRepository<ActionTrl, Long> {
   long countByAction(Action action);
 
   List<ActionTrl> findByIso3Language(String iso3Language);
+
+  @Query("SELECT distinct(iso3Language) from ActionTrl order by iso3Language")
+  List<String> getIso3Languages();
 
   Optional<ActionTrl> getByActionAndIso3Language(Action action, String iso3Language);
 

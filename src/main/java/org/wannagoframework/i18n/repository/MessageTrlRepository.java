@@ -21,6 +21,7 @@ package org.wannagoframework.i18n.repository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.wannagoframework.i18n.domain.Message;
 import org.wannagoframework.i18n.domain.MessageTrl;
@@ -38,6 +39,9 @@ public interface MessageTrlRepository extends JpaRepository<MessageTrl, Long> {
   long countByMessage(Message message);
 
   List<MessageTrl> findByIso3Language(String iso3Language);
+
+  @Query("SELECT distinct(iso3Language) from MessageTrl order by iso3Language")
+  List<String> getIso3Languages();
 
   Optional<MessageTrl> getByMessageAndIso3Language(Message message, String iso3Language);
 

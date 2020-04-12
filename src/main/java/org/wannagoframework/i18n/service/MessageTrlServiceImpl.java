@@ -18,13 +18,14 @@
 
 package org.wannagoframework.i18n.service;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.PostConstruct;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -38,8 +39,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
-import org.wannagoframework.i18n.domain.Action;
-import org.wannagoframework.i18n.domain.ActionTrl;
 import org.wannagoframework.i18n.domain.Message;
 import org.wannagoframework.i18n.domain.MessageTrl;
 import org.wannagoframework.i18n.repository.MessageRepository;
@@ -191,12 +190,22 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
     if (hasBootstrapped || !isBootstrapEnabled) {
       return;
     }
-
     String loggerPrefix = getLoggerPrefix("bootstrapMessages");
+    try {
+      importExcelFile(Files.readAllBytes(Path.of(bootstrapFile)));
+    } catch (IOException e) {
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+    }
+  }
 
-    try (Workbook workbook = WorkbookFactory.create(new File(bootstrapFile))) {
-
-      Sheet sheet = workbook.getSheet("messages");
+  @Transactional
+  public String importExcelFile(byte[] content) {
+    String loggerPrefix = getLoggerPrefix("importExcelFile");
+    try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(content))) {
+      Sheet sheet = workbook.getSheet("Messages");
+      if (sheet == null) {
+        sheet = workbook.getSheet("messages");
+      }
 
       logger().info(loggerPrefix + sheet.getPhysicalNumberOfRows() + " rows");
 
@@ -214,10 +223,12 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
           logger().info(loggerPrefix + "Handle row " + rowIndex++);
         }
 
-        int colIdx = 1;
+        int colIdx = 0;
+        Cell categoryCell = row.getCell(colIdx++);
         Cell name0Cell = row.getCell(colIdx++);
         Cell name1Cell = row.getCell(colIdx++);
         Cell name2Cell = row.getCell(colIdx++);
+        Cell name3Cell = row.getCell(colIdx++);
         Cell langCell = row.getCell(colIdx++);
         Cell valueCell = row.getCell(colIdx);
 
@@ -231,12 +242,17 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
           continue;
         }
 
+        String category = categoryCell == null ? null : categoryCell.getStringCellValue();
+
         String name = name0Cell.getStringCellValue();
         if (name1Cell != null) {
           name += "." + name1Cell.getStringCellValue();
         }
         if (name2Cell != null) {
           name += "." + name2Cell.getStringCellValue();
+        }
+        if (name3Cell != null) {
+          name += "." + name3Cell.getStringCellValue();
         }
 
         String language = langCell.getStringCellValue();
@@ -246,10 +262,12 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
         if (!_message.isPresent()) {
           message = new Message();
           message.setName(name);
+          message.setCategory(category);
           message.setIsTranslated(true);
           message = messageRepository.save(message);
         } else {
           message = _message.get();
+          message.setCategory(category);
           message.setIsTranslated(true);
           message = messageRepository.save(message);
         }
@@ -278,11 +296,14 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
         }
       }
     } catch (IOException e) {
-      e.printStackTrace();
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+      return e.getMessage();
     }
 
     logger().info(loggerPrefix + "Done");
 
     hasBootstrapped = true;
+
+    return null;
   }
 }

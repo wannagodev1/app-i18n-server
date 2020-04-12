@@ -51,6 +51,8 @@ public class Element extends BaseEntity {
   @Column(unique = true, nullable = false)
   private String name;
 
+  private String category;
+
   private Boolean isTranslated = Boolean.FALSE;
 
   @Transient

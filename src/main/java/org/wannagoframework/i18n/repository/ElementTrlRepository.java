@@ -21,6 +21,7 @@ package org.wannagoframework.i18n.repository;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 import org.wannagoframework.i18n.domain.Element;
 import org.wannagoframework.i18n.domain.ElementTrl;
@@ -34,6 +35,11 @@ import org.wannagoframework.i18n.domain.ElementTrl;
 public interface ElementTrlRepository extends JpaRepository<ElementTrl, Long> {
 
   List<ElementTrl> findByElement(Element element);
+
+  List<ElementTrl> findByElementOrderByIso3Language(Element element);
+
+  @Query("SELECT distinct(iso3Language) from ElementTrl order by iso3Language")
+  List<String> getIso3Languages();
 
   long countByElement(Element element);
 

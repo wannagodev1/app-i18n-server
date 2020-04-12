@@ -18,13 +18,14 @@
 
 package org.wannagoframework.i18n.service;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.PostConstruct;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -38,8 +39,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
-import org.wannagoframework.i18n.domain.Action;
-import org.wannagoframework.i18n.domain.ActionTrl;
 import org.wannagoframework.i18n.domain.Element;
 import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.repository.ElementRepository;
@@ -191,12 +190,22 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
     if (hasBootstrapped || !isBootstrapEnabled) {
       return;
     }
-
     String loggerPrefix = getLoggerPrefix("bootstrapElements");
+    try {
+      importExcelFile(Files.readAllBytes(Path.of(bootstrapFile)));
+    } catch (IOException e) {
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+    }
+  }
 
-    try (Workbook workbook = WorkbookFactory.create(new File(bootstrapFile))) {
-
-      Sheet sheet = workbook.getSheet("elements");
+  @Transactional
+  public String importExcelFile(byte[] content) {
+    String loggerPrefix = getLoggerPrefix("importExcelFile");
+    try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(content))) {
+      Sheet sheet = workbook.getSheet("Elements");
+      if (sheet == null) {
+        sheet = workbook.getSheet("elements");
+      }
 
       logger().info(loggerPrefix + sheet.getPhysicalNumberOfRows() + " rows");
 
@@ -214,13 +223,15 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           logger().info(loggerPrefix + "Handle row " + rowIndex++);
         }
 
-        int colIdx = 1;
+        int colIdx = 0;
+        Cell categoryCell = row.getCell(colIdx++);
         Cell name0Cell = row.getCell(colIdx++);
         Cell name1Cell = row.getCell(colIdx++);
         Cell name2Cell = row.getCell(colIdx++);
         Cell name3Cell = row.getCell(colIdx++);
         Cell langCell = row.getCell(colIdx++);
         Cell valueCell = row.getCell(colIdx);
+        Cell tooltipCell = row.getCell(colIdx);
 
         if (langCell == null) {
           logger().error(loggerPrefix + "Empty value for language, skip");
@@ -231,6 +242,8 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           logger().error(loggerPrefix + "Empty value for name, skip");
           continue;
         }
+
+        String category = categoryCell == null ? null : categoryCell.getStringCellValue();
 
         String name = name0Cell.getStringCellValue();
         if (name1Cell != null) {
@@ -250,10 +263,12 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
         if (!_element.isPresent()) {
           element = new Element();
           element.setName(name);
+          element.setCategory(category);
           element.setIsTranslated(true);
           element = elementRepository.save(element);
         } else {
           element = _element.get();
+          element.setCategory(category);
           element.setIsTranslated(true);
           element = elementRepository.save(element);
         }
@@ -264,6 +279,7 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
         if (!_elementTrl.isPresent()) {
           elementTrl = new ElementTrl();
           elementTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+          elementTrl.setTooltip(tooltipCell == null ? null : tooltipCell.getStringCellValue());
           elementTrl.setIso3Language(language);
           elementTrl.setElement(element);
           elementTrl.setIsTranslated(true);
@@ -273,6 +289,7 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           elementTrl = _elementTrl.get();
           if ( ! elementTrl.getIsTranslated() ) {
             elementTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+            elementTrl.setTooltip(tooltipCell == null ? null : tooltipCell.getStringCellValue());
             elementTrl.setIso3Language(language);
             elementTrl.setElement(element);
             elementTrl.setIsTranslated(true);
@@ -281,12 +298,14 @@ public class ElementTrlServiceImpl implements ElementTrlService, HasLogger {
           }
         }
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+    } catch (Throwable e) {
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+      return e.getMessage();
     }
 
     logger().info(loggerPrefix + "Done");
 
     hasBootstrapped = true;
+    return null;
   }
 }

@@ -19,7 +19,6 @@
 package org.wannagoframework.i18n.service;
 
 import java.util.List;
-import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.domain.MessageTrl;
 
 /**
@@ -42,4 +41,6 @@ public interface MessageTrlService extends CrudService<MessageTrl> {
   void deleteAll(List<MessageTrl> messageTrls);
 
   void postUpdate(MessageTrl messageTrl);
+
+  String importExcelFile(byte[] content);
 }

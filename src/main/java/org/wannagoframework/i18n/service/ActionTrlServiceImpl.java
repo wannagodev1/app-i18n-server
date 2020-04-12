@@ -18,13 +18,14 @@
 
 package org.wannagoframework.i18n.service;
 
-import java.io.File;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
-import javax.annotation.PostConstruct;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
@@ -40,8 +41,6 @@ import org.springframework.util.Assert;
 import org.wannagoframework.commons.utils.HasLogger;
 import org.wannagoframework.i18n.domain.Action;
 import org.wannagoframework.i18n.domain.ActionTrl;
-import org.wannagoframework.i18n.domain.Element;
-import org.wannagoframework.i18n.domain.ElementTrl;
 import org.wannagoframework.i18n.repository.ActionRepository;
 import org.wannagoframework.i18n.repository.ActionTrlRepository;
 
@@ -194,9 +193,22 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
 
     String loggerPrefix = getLoggerPrefix("bootstrapActions");
 
-    try (Workbook workbook = WorkbookFactory.create(new File(bootstrapFile))) {
+    try {
+      importExcelFile(Files.readAllBytes(Path.of(bootstrapFile)));
+    } catch (IOException e) {
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+    }
+  }
 
-      Sheet sheet = workbook.getSheet("actions");
+  @Transactional
+  public String importExcelFile(byte[] content) {
+    String loggerPrefix = getLoggerPrefix("importExcelFile");
+    try (Workbook workbook = WorkbookFactory.create(new ByteArrayInputStream(content))) {
+
+      Sheet sheet = workbook.getSheet("Actions");
+      if (sheet == null) {
+        sheet = workbook.getSheet("actions");
+      }
 
       logger().info(loggerPrefix + sheet.getPhysicalNumberOfRows() + " rows");
 
@@ -214,12 +226,16 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           logger().info(loggerPrefix + "Handle row " + rowIndex++);
         }
 
-        int colIdx = 1;
+        int colIdx = 0;
+
+        Cell categoryCell = row.getCell(colIdx++);
         Cell name0Cell = row.getCell(colIdx++);
         Cell name1Cell = row.getCell(colIdx++);
         Cell name2Cell = row.getCell(colIdx++);
+        Cell name3Cell = row.getCell(colIdx++);
         Cell langCell = row.getCell(colIdx++);
         Cell valueCell = row.getCell(colIdx);
+        Cell tooltipCell = row.getCell(colIdx);
 
         if (langCell == null) {
           logger().error(loggerPrefix + "Empty value for language, skip");
@@ -231,12 +247,17 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           continue;
         }
 
+        String category = categoryCell == null ? null : categoryCell.getStringCellValue();
+
         String name = name0Cell.getStringCellValue();
         if (name1Cell != null) {
           name += "." + name1Cell.getStringCellValue();
         }
         if (name2Cell != null) {
           name += "." + name2Cell.getStringCellValue();
+        }
+        if (name3Cell != null) {
+          name += "." + name3Cell.getStringCellValue();
         }
 
         String language = langCell.getStringCellValue();
@@ -246,10 +267,12 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
         if (!_action.isPresent()) {
           action = new Action();
           action.setName(name);
+          action.setCategory(category);
           action.setIsTranslated(true);
           action = actionRepository.save(action);
         } else {
           action = _action.get();
+          action.setCategory(category);
           action.setIsTranslated(true);
           action = actionRepository.save(action);
         }
@@ -260,6 +283,7 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
         if (!_actionTrl.isPresent()) {
           actionTrl = new ActionTrl();
           actionTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+          actionTrl.setTooltip(tooltipCell == null ? null : tooltipCell.getStringCellValue());
           actionTrl.setIso3Language(language);
           actionTrl.setAction(action);
           actionTrl.setIsTranslated(true);
@@ -269,6 +293,7 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           actionTrl = _actionTrl.get();
           if ( ! actionTrl.getIsTranslated() ) {
             actionTrl.setValue(valueCell == null ? "" : valueCell.getStringCellValue());
+            actionTrl.setTooltip(tooltipCell == null ? null : tooltipCell.getStringCellValue());
             actionTrl.setIso3Language(language);
             actionTrl.setAction(action);
             actionTrl.setIsTranslated(true);
@@ -277,12 +302,14 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
           }
         }
       }
-    } catch (IOException e) {
-      e.printStackTrace();
+    } catch (Throwable e) {
+      logger().error(loggerPrefix + "Something wrong happen : " + e.getMessage(), e);
+      return e.getMessage();
     }
 
     logger().info(loggerPrefix + "Done");
 
     hasBootstrapped = true;
+    return null;
   }
 }

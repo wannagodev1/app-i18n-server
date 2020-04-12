@@ -41,4 +41,6 @@ public interface ActionTrlService extends CrudService<ActionTrl> {
   void deleteAll(List<ActionTrl> actionTrls);
 
   void postUpdate(ActionTrl actionTrl);
+
+  String importExcelFile(byte[] content);
 }
