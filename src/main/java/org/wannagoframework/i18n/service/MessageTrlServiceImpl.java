@@ -214,13 +214,13 @@ public class MessageTrlServiceImpl implements MessageTrlService, HasLogger {
 
       while (rowIterator.hasNext()) {
         Row row = rowIterator.next();
-        if (rowIndex == 0) {
-          rowIndex++;
+        rowIndex++;
+        if (rowIndex == 1) {
           continue;
         }
 
         if (rowIndex % 10 == 0) {
-          logger().info(loggerPrefix + "Handle row " + rowIndex++);
+          logger().info(loggerPrefix + "Handle row " + rowIndex);
         }
 
         int colIdx = 0;

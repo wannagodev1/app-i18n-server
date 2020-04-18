@@ -217,13 +217,15 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
 
       while (rowIterator.hasNext()) {
         Row row = rowIterator.next();
-        if (rowIndex == 0) {
-          rowIndex++;
+
+        rowIndex++;
+
+        if (rowIndex == 1) {
           continue;
         }
 
         if (rowIndex % 10 == 0) {
-          logger().info(loggerPrefix + "Handle row " + rowIndex++);
+          logger().info(loggerPrefix + "Handle row " + rowIndex);
         }
 
         int colIdx = 0;
@@ -234,7 +236,7 @@ public class ActionTrlServiceImpl implements ActionTrlService, HasLogger {
         Cell name2Cell = row.getCell(colIdx++);
         Cell name3Cell = row.getCell(colIdx++);
         Cell langCell = row.getCell(colIdx++);
-        Cell valueCell = row.getCell(colIdx);
+        Cell valueCell = row.getCell(colIdx++);
         Cell tooltipCell = row.getCell(colIdx);
 
         if (langCell == null) {
